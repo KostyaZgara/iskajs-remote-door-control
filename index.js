@@ -1,22 +1,23 @@
 const receiver = require('@amperka/ir-receiver').connect(P2);
 
 // power switches
-const openDoorKeyPin = P0;
-const closeDoorKeyPin = P1;
+const openGateKeyPin = P0;
+const closeGateKeyPin = P1;
 
 // barrier indicators
-const lockBarrier = P9;
+const lockRightBarrier = P8;
+const lockLeftBarrier = P9;
 const bottomRightBarrier = P10;
 const bottomLeftBarrier = P11;
-const topLeftBarrier = P13;
 const topRightBarrier = P12;
+const topLeftBarrier = P13;
 
 // control buttons
 const powerButton = 0xfd00ff;
-const doorUpButton = 0xfd48b7;
-const doorUpDuplicateButton = 3;
-const doorDownButton = 0xfd6897;
-const switchDoorStateButton = 0xfd40bf;
+const gateUpButton = 0xfd48b7;
+const gateUpDuplicateButton = 3;
+const gateDownButton = 0xfd6897;
+const switchGateStateButton = 0xfd40bf;
 
 const ButtonController = function (isButtonClicked) {
   this._isButtonClicked = isButtonClicked;
@@ -48,39 +49,43 @@ ButtonController.prototype._updateReleaseTimeout = function (timeout) {
   }, timeout);
 };
 
-function openDoorPowerSwitch(keyPin) {
-  if (lockBarrier.read() === 1) {
+function isGateLocked() {
+  return lockLeftBarrier.read() === 1 || lockRightBarrier.read() === 1;
+}
+
+function openGatePowerSwitch(keyPin) {
+  if (isGateLocked()) {
     return;
   }
   digitalWrite(keyPin, HIGH);
 }
 
-function closeDoorPowerSwitch(keyPin) {
-  if (lockBarrier.read() === 1) {
+function closeGatePowerSwitch(keyPin) {
+  if (isGateLocked()) {
     return;
   }
   digitalWrite(keyPin, LOW);
 }
 
-function startDoorUpHandler() {
-  const doorUpButtonController = new ButtonController((code) => code === doorUpButton || code === doorUpDuplicateButton);
+function startGateUpHandler() {
+  const gateUpButtonController = new ButtonController((code) => code === gateUpButton || code === gateUpDuplicateButton);
 
-  doorUpButtonController.on('press', function () {
-    openDoorPowerSwitch(openDoorKeyPin);
+  gateUpButtonController.on('press', function () {
+    openGatePowerSwitch(openGateKeyPin);
   });
-  doorUpButtonController.on('release', function () {
-    closeDoorPowerSwitch(openDoorKeyPin);
+  gateUpButtonController.on('release', function () {
+    closeGatePowerSwitch(openGateKeyPin);
   });
 }
 
-function startDoorDownHandler() {
-  const doorDownButtonController = new ButtonController((code) => code === doorDownButton);
+function startGateDownHandler() {
+  const gateDownButtonController = new ButtonController((code) => code === gateDownButton);
 
-  doorDownButtonController.on('press', function () {
-    openDoorPowerSwitch(closeDoorKeyPin);
+  gateDownButtonController.on('press', function () {
+    openGatePowerSwitch(closeGateKeyPin);
   });
-  doorDownButtonController.on('release', function () {
-    closeDoorPowerSwitch(closeDoorKeyPin);
+  gateDownButtonController.on('release', function () {
+    closeGatePowerSwitch(closeGateKeyPin);
   });
 }
 
@@ -88,26 +93,26 @@ function startPowerOffHandler() {
   const powerButtonController = new ButtonController((code) => code === powerButton);
 
   powerButtonController.on('press', function () {
-    closeDoorPowerSwitch(openDoorKeyPin);
-    closeDoorPowerSwitch(closeDoorKeyPin);
+    closeGatePowerSwitch(openGateKeyPin);
+    closeGatePowerSwitch(closeGateKeyPin);
   });
 
   powerButtonController.on('hold', function () {
-    closeDoorPowerSwitch(openDoorKeyPin);
-    closeDoorPowerSwitch(closeDoorKeyPin);
+    closeGatePowerSwitch(openGateKeyPin);
+    closeGatePowerSwitch(closeGateKeyPin);
   });
 }
 
-function startSwitchDoorStateHandler() {
-  const switchDoorStateButtonController = new ButtonController((code) => code === switchDoorStateButton);
+function startSwitchGateStateHandler() {
+  const switchGateStateButtonController = new ButtonController((code) => code === switchGateStateButton);
 
-  switchDoorStateButtonController.on('press', function () {
+  switchGateStateButtonController.on('press', function () {
     print('The gate is opening');
   });
 }
 
 startPowerOffHandler();
-startDoorUpHandler();
-startDoorDownHandler();
-startSwitchDoorStateHandler();
+startGateUpHandler();
+startGateDownHandler();
+startSwitchGateStateHandler();
 
