@@ -1,4 +1,5 @@
-const receiver = require('@amperka/ir-receiver').connect(P2);
+const insideReceiver = require('@amperka/ir-receiver').connect(P2);
+const outsideReceiver = require('@amperka/ir-receiver').connect(P3);
 
 // power switches
 const openGateKeyPin = P0;
@@ -19,10 +20,31 @@ const gateUpDuplicateButton = 3;
 const gateDownButton = 0xfd6897;
 const switchGateStateButton = 0xfd40bf;
 
+// function helpers
+function isGateLocked() {
+  return lockLeftBarrier.read() === 1 || lockRightBarrier.read() === 1;
+}
+
+function openGatePowerSwitch(keyPin) {
+  if (isGateLocked()) {
+    return;
+  }
+  digitalWrite(keyPin, HIGH);
+}
+
+function closeGatePowerSwitch(keyPin) {
+  if (isGateLocked()) {
+    return;
+  }
+  digitalWrite(keyPin, LOW);
+}
+
+// controllers
 const ButtonController = function (isButtonClicked) {
   this._isButtonClicked = isButtonClicked;
   this._holdTimeoutId = null;
-  receiver.on('receive', this._onButtonAction.bind(this));
+  insideReceiver.on('receive', this._onButtonAction.bind(this));
+  outsideReceiver.on('receive', this._onButtonAction.bind(this));
 };
 
 ButtonController.prototype._onButtonAction = function (code, repeat) {
@@ -49,24 +71,58 @@ ButtonController.prototype._updateReleaseTimeout = function (timeout) {
   }, timeout);
 };
 
-function isGateLocked() {
-  return lockLeftBarrier.read() === 1 || lockRightBarrier.read() === 1;
-}
+const GateStateController = function () {
+  this._isClosed = true;
+  this._isOpened = false;
+  this._inProgress = false;
+};
 
-function openGatePowerSwitch(keyPin) {
-  if (isGateLocked()) {
-    return;
+GateStateController.prototype.switchState = function () {
+  if (this._isClosed && !this._inProgress) {
+    this._openGate();
+  } else if (this._isOpened && !this._inProgress) {
+    this._closeGate();
   }
-  digitalWrite(keyPin, HIGH);
-}
+};
 
-function closeGatePowerSwitch(keyPin) {
-  if (isGateLocked()) {
-    return;
-  }
-  digitalWrite(keyPin, LOW);
-}
+GateStateController.prototype._openGate = function () {
+  this._inProgress = true;
+  this._isClosed = false;
+  const self = this;
+  openGatePowerSwitch(openGateKeyPin);
+  const idWatches = this._setWatch([topLeftBarrier, topRightBarrier], function (e) {
+    closeGatePowerSwitch(openGateKeyPin);
+    idWatches.forEach((idWatch) => clearWatch(idWatch));
+    self._inProgress = false;
+    self._isOpened = true;
+  });
+};
 
+GateStateController.prototype._closeGate = function () {
+  this._inProgress = true;
+  this._isOpened = false;
+  const self = this;
+  openGatePowerSwitch(closeGateKeyPin);
+  const idWatches = this._setWatch([bottomLeftBarrier, bottomRightBarrier], function (e) {
+    closeGatePowerSwitch(closeGateKeyPin);
+    idWatches.forEach((idWatch) => clearWatch(idWatch));
+    self._inProgress = false;
+    this._isClosed = true;
+  });
+};
+
+GateStateController.prototype._setWatch = function (pins, cb) {
+  const options = {
+    repeat: true,
+    edge: 'rising',
+    debounce: 10,
+  };
+  return pins.map((pin) => {
+    return setWatch(cb, pin, options);
+  });
+};
+
+// Handlers
 function startGateUpHandler() {
   const gateUpButtonController = new ButtonController((code) => code === gateUpButton || code === gateUpDuplicateButton);
 
@@ -105,9 +161,10 @@ function startPowerOffHandler() {
 
 function startSwitchGateStateHandler() {
   const switchGateStateButtonController = new ButtonController((code) => code === switchGateStateButton);
+  const gateStateController = new GateStateController();
 
   switchGateStateButtonController.on('press', function () {
-    print('The gate is opening');
+    gateStateController.switchState();
   });
 }
 
