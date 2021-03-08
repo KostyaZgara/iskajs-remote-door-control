@@ -5,6 +5,9 @@ const outsideReceiver = require('@amperka/ir-receiver').connect(P3);
 const openGateKeyPin = P0;
 const closeGateKeyPin = P1;
 
+// audio signals
+const mainAudioSignalPin = P4;
+
 // barrier indicators
 const lockRightBarrier = P8;
 const lockLeftBarrier = P9;
@@ -21,12 +24,17 @@ const gateDownButton = 0xfd6897;
 const switchGateStateButton = 0xfd40bf;
 
 // function helpers
+function beep() {
+  mainAudioSignalPin.writeAtTime(HIGH, 3000);
+}
+
 function isGateLocked() {
   return lockLeftBarrier.read() === 1 || lockRightBarrier.read() === 1;
 }
 
 function openGatePowerSwitch(keyPin) {
   if (isGateLocked()) {
+    beep();
     return;
   }
   digitalWrite(keyPin, HIGH);
@@ -34,6 +42,7 @@ function openGatePowerSwitch(keyPin) {
 
 function closeGatePowerSwitch(keyPin) {
   if (isGateLocked()) {
+    beep();
     return;
   }
   digitalWrite(keyPin, LOW);
