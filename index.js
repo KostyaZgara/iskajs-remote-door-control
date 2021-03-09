@@ -32,7 +32,8 @@ function beep() {
 }
 
 function isGateLocked() {
-  return lockLeftBarrier.read() === 1 || lockRightBarrier.read() === 1;
+  return !lockRightBarrier.read();
+  // return !lockLeftBarrier.read() === 1 || !lockRightBarrier.read() === 1;
 }
 
 function openGatePowerSwitch(keyPin) {
@@ -102,9 +103,8 @@ GateStateController.prototype._openGate = function () {
   this._isClosed = false;
   const self = this;
   openGatePowerSwitch(openGateKeyPin);
-  const idWatches = this._setWatch([topLeftBarrier, topRightBarrier], function (e) {
+  this._setWatch([topLeftBarrier, topRightBarrier], function (e) {
     closeGatePowerSwitch(openGateKeyPin);
-    idWatches.forEach((idWatch) => clearWatch(idWatch));
     self._inProgress = false;
     self._isOpened = true;
   });
@@ -115,23 +115,21 @@ GateStateController.prototype._closeGate = function () {
   this._isOpened = false;
   const self = this;
   openGatePowerSwitch(closeGateKeyPin);
-  const idWatches = this._setWatch([bottomLeftBarrier, bottomRightBarrier], function (e) {
+  this._setWatch([bottomLeftBarrier, bottomRightBarrier], function (e) {
     closeGatePowerSwitch(closeGateKeyPin);
-    idWatches.forEach((idWatch) => clearWatch(idWatch));
     self._inProgress = false;
-    this._isClosed = true;
+    self._isClosed = true;
   });
 };
 
 GateStateController.prototype._setWatch = function (pins, cb) {
-  const options = {
-    repeat: true,
-    edge: 'rising',
-    debounce: 10,
-  };
-  return pins.map((pin) => {
-    return setWatch(cb, pin, options);
-  });
+  return pins.map(
+    (pin) => setWatch(cb, pin, {
+      repeat: false,
+      edge: 'falling',
+      debounce: 10,
+    })
+  );
 };
 
 // Handlers
