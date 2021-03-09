@@ -25,7 +25,10 @@ const switchGateStateButton = 0xfd40bf;
 
 // function helpers
 function beep() {
-  mainAudioSignalPin.writeAtTime(HIGH, 3000);
+  mainAudioSignalPin.reset();
+  setTimeout(() => {
+    mainAudioSignalPin.set();
+  }, 5000);
 }
 
 function isGateLocked() {
@@ -37,7 +40,7 @@ function openGatePowerSwitch(keyPin) {
     beep();
     return;
   }
-  digitalWrite(keyPin, HIGH);
+  keyPin.set();
 }
 
 function closeGatePowerSwitch(keyPin) {
@@ -45,7 +48,7 @@ function closeGatePowerSwitch(keyPin) {
     beep();
     return;
   }
-  digitalWrite(keyPin, LOW);
+  keyPin.reset();
 }
 
 // controllers
@@ -181,4 +184,3 @@ startPowerOffHandler();
 startGateUpHandler();
 startGateDownHandler();
 startSwitchGateStateHandler();
-
