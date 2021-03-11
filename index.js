@@ -145,6 +145,18 @@ GateStateController.prototype._openGate = function () {
     this._isOpening = true;
     this._isClosed = false;
   }
+  setTimeout(() => {
+    closeGatePowerSwitch(openGateKeyPin);
+  }, 1000);
+  setTimeout(() => {
+    openGatePowerSwitch(openGateKeyPin);
+  }, 1500);
+  setTimeout(() => {
+    closeGatePowerSwitch(openGateKeyPin);
+  }, 2500);
+  setTimeout(() => {
+    openGatePowerSwitch(openGateKeyPin);
+  }, 3000);
 };
 
 GateStateController.prototype._closeGate = function () {
