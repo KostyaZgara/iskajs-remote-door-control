@@ -35,7 +35,7 @@ const lockLeftBarrier = P3;
 const topRightBarrier = P6;
 const topLeftBarrier = P7;
 const bottomLeftBarrier = P11;
-const bottomRightBarrier = P12;
+const bottomRightBarrier = P4;
 
 // control buttons
 const powerButton = 0xfd00ff;
@@ -53,7 +53,7 @@ function beep() {
 }
 
 function isGateLocked() {
-  return !lockLeftBarrier.read() || !lockRightBarrier.read();
+  return !lockRightBarrier.read();
 }
 
 function openGatePowerSwitch(keyPin) {
@@ -104,7 +104,7 @@ ButtonController.prototype._updateReleaseTimeout = function (timeout) {
 const GateStateController = function () {
   this.reset();
   const self = this;
-  this._setWatch([topRightBarrier, topLeftBarrier], function () {
+  this._setWatch([topRightBarrier], function () {
     if (!self._isOpening) {
       return;
     }
@@ -112,7 +112,7 @@ const GateStateController = function () {
     self._isOpened = true;
     self._isOpening = false;
   });
-  this._setWatch([bottomRightBarrier, bottomLeftBarrier], function () {
+  this._setWatch([bottomRightBarrier], function () {
     if (!self._isClosing) {
       return;
     }
@@ -170,7 +170,7 @@ GateStateController.prototype._setWatch = function (pins, cb) {
   pins.forEach(
     (pin) => setWatch(cb, pin, {
       repeat: true,
-      edge: 'falling',
+      edge: 'rising',
       debounce: 10
     })
   );
