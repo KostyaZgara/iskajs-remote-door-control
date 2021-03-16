@@ -53,8 +53,7 @@ function beep() {
 }
 
 function isGateLocked() {
-  return !lockRightBarrier.read();
-  // return !lockLeftBarrier.read() === 1 || !lockRightBarrier.read() === 1;
+  return !lockLeftBarrier.read() || !lockRightBarrier.read();
 }
 
 function openGatePowerSwitch(keyPin) {
@@ -105,7 +104,7 @@ ButtonController.prototype._updateReleaseTimeout = function (timeout) {
 const GateStateController = function () {
   this.reset();
   const self = this;
-  this._setWatch([topRightBarrier], function () {
+  this._setWatch([topRightBarrier, topLeftBarrier], function () {
     if (!self._isOpening) {
       return;
     }
@@ -113,7 +112,7 @@ const GateStateController = function () {
     self._isOpened = true;
     self._isOpening = false;
   });
-  this._setWatch([bottomRightBarrier], function () {
+  this._setWatch([bottomRightBarrier, bottomLeftBarrier], function () {
     if (!self._isClosing) {
       return;
     }
@@ -144,19 +143,19 @@ GateStateController.prototype._openGate = function () {
   if (result) {
     this._isOpening = true;
     this._isClosed = false;
+    setTimeout(() => {
+      closeGatePowerSwitch(openGateKeyPin);
+    }, 1000);
+    setTimeout(() => {
+      openGatePowerSwitch(openGateKeyPin);
+    }, 1500);
+    setTimeout(() => {
+      closeGatePowerSwitch(openGateKeyPin);
+    }, 2500);
+    setTimeout(() => {
+      openGatePowerSwitch(openGateKeyPin);
+    }, 3000);
   }
-  setTimeout(() => {
-    closeGatePowerSwitch(openGateKeyPin);
-  }, 1000);
-  setTimeout(() => {
-    openGatePowerSwitch(openGateKeyPin);
-  }, 1500);
-  setTimeout(() => {
-    closeGatePowerSwitch(openGateKeyPin);
-  }, 2500);
-  setTimeout(() => {
-    openGatePowerSwitch(openGateKeyPin);
-  }, 3000);
 };
 
 GateStateController.prototype._closeGate = function () {
